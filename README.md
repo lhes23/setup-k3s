@@ -50,3 +50,56 @@ configs:
 ```
 sudo systemctl restart k3s
 ```
+
+
+## Install Cert Manager
+```
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+```
+```
+kubectl apply --validate=false -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.crds.yaml
+```
+```
+helm install cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --version v1.15.0
+```
+
+## Create ClusterIssuer
+```
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: your-email@example.com
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+```
+```
+kubectl apply -f clusterissuer.yaml
+```
+
+> Add this to the ingress
+> 
+```
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: example-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+  - hosts:
+    - example.com
+    secretName: example-com-tls
+```
